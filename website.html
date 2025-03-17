@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="description" content="Heritage Explorer helps you discover Tamil Nadu's rich heritage and culture." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Heritage Explorer</title>
+  <!-- Import Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* Minimal inline CSS for demonstration purposes */
+    .modal, .modal-overlay, #backToTop, #chatbotContainer {
+      position: fixed;
+      z-index: 1000;
+      background: #fff;
+      padding: 1rem;
+      border: 1px solid #ccc;
+    }
+    .modal-overlay {
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+    }
+    .modal {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    #backToTop {
+      bottom: 80px;
+      right: 20px;
+      cursor: pointer;
+      background: #333;
+      color: #fff;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 4px;
+    }
+    #chatbotContainer {
+      bottom: 80px;
+      right: 20px;
+      width: 300px;
+      height: 400px;
+      flex-direction: column;
+      display: none;
+      background: #f9f9f9;
+      border: 1px solid #ccc;
+    }
+    #chatbotHeader {
+      background: #333;
+      color: #fff;
+      padding: 0.5rem;
+    }
+    #chatbotMessages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.5rem;
+    }
+    #chatbotInputContainer {
+      display: flex;
+    }
+    #chatbotInput {
+      flex: 1;
+      padding: 0.5rem;
+    }
+    #chatbotSendButton {
+      padding: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 id="mainHeading">Heritage Explorer</h1>
+    <p id="subHeading">Discover Tamil Nadu's rich heritage and culture</p>
+    <!-- Language Toggle Navigation and Favorites Button -->
+    <nav class="language-toggle" aria-label="Language Toggle">
+      <button type="button" id="toggleLang" aria-label="Toggle Language">தமிழ்</button>
+      <button type="button" id="favoritesButton" aria-label="View Favorites">Favorites</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Search Bar -->
+    <div class="search-container">
+      <input
+        type="search"
+        id="searchBar"
+        placeholder="Search Heritage Sites..."
+        aria-label="Search Heritage Sites"
+      />
+      <button id="micButton" aria-label="Voice Search">🎤</button>
+      <!-- Current Location Button -->
+      <button id="currentLocationButton" aria-label="Find Nearby Sites">
+        Find Nearby Sites
+      </button>
+      <div id="locationSpinner" class="spinner" aria-hidden="true" style="display: none;"></div>
+    </div>
+
+    <!-- Location Filter Dropdown -->
+    <div class="location-filter">
+      <label for="locationFilter">Filter by Location:</label>
+      <select id="locationFilter">
+        <option value="">All Locations</option>
+      </select>
+    </div>
+
+    <!-- Heritage Sites List -->
+    <section class="site-list" id="siteList" aria-label="Heritage Sites">
+      <!-- Dynamic site cards will be injected here -->
+    </section>
+  </main>
+
+  <!-- Site Modal -->
+  <div id="siteModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" style="display: none;">
+    <h2 id="modalTitle"></h2>
+    <p id="modalDescription"></p>
+    <button id="playAudio" type="button">Play Audio</button>
+    <button id="closeModalButton" type="button" aria-label="Close Modal">Close</button>
+  </div>
+  <div class="modal-overlay" id="modalOverlay" style="display: none;"></div>
+
+  <!-- Nearby Places Modal -->
+  <div class="modal-overlay" id="nearbyOverlay" style="display: none;"></div>
+  <div class="modal" id="nearbyModal" role="dialog" aria-modal="true" aria-labelledby="nearbyModalTitle" style="display: none;">
+    <h2 id="nearbyModalTitle">Nearby Places</h2>
+    <div id="nearbyList"></div>
+    <button type="button" id="closeNearbyModalButton">Close</button>
+  </div>
+
+  <!-- Favorites Modal -->
+  <div class="modal-overlay" id="favoritesOverlay" style="display: none;"></div>
+  <div class="modal" id="favoritesModal" role="dialog" aria-modal="true" aria-labelledby="favoritesModalTitle" style="display: none;">
+    <h2 id="favoritesModalTitle">Favorite Sites</h2>
+    <div id="favoritesList"></div>
+    <button type="button" id="closeFavoritesModalButton">Close</button>
+  </div>
+
+  <!-- Reviews Modal -->
+  <div class="modal-overlay" id="reviewsOverlay" style="display: none;"></div>
+  <div class="modal" id="reviewsModal" role="dialog" aria-modal="true" aria-labelledby="reviewsModalTitle" style="display: none;">
+    <h2 id="reviewsModalTitle">
+      Reviews for <span id="reviewsSiteName"></span>
+    </h2>
+    <div id="reviewsList"></div>
+    <textarea id="newReview" placeholder="Write your review here..."></textarea>
+    <button type="button" id="submitReviewButton">Submit Review</button>
+    <button type="button" id="closeReviewsModalButton">Close</button>
+  </div>
+
+  <!-- Map Section -->
+  <section id="mapSection">
+    <h2>Heritage Map</h2>
+    <div id="map" style="width: 100%; height: 400px;"></div>
+  </section>
+
+  <!-- Chatbot -->
+  <div id="chatbotContainer" role="complementary" aria-label="Heritage Chatbot">
+    <div id="chatbotHeader">Heritage Chatbot</div>
+    <div id="chatbotMessages" aria-live="polite"></div>
+    <div id="chatbotInputContainer">
+      <input
+        id="chatbotInput"
+        type="text"
+        placeholder="Ask me anything..."
+        aria-label="Chatbot Input"
+      />
+      <button type="button" id="chatbotSendButton" aria-label="Send Message">Send</button>
+    </div>
+  </div>
+  <button id="chatbotToggle" aria-label="Toggle Chatbot">💬</button>
+
+  <!-- Back-to-Top Button -->
+  <button id="backToTop" aria-label="Back to Top" style="display: none;">↑</button>
+
+  <footer>
+    <p id="footerText">&copy; 2025 Heritage Explorer | Explore Tamil Nadu</p>
+  </footer>
+
+  <script>
+    /***** Analytics and Event Tracking *****/
+    function trackEvent(eventName, eventData) {
+      console.log("Tracking Event:", eventName, eventData);
+      // For production, send this data to an analytics service.
+    }
+
+    /***** Mapping and Data *****/
+    const detailsPageMapping = {
+      "Brihadeeswarar Temple": "index.html",
+      "Meenakshi Amman Temple": "meenakshi-amman-temple.html",
+      "Mahabalipuram": "mahabalipuram.html",
+      "Thanjavur Palace": "thanjavur-palace.html",
+      "Ramanathaswamy Temple": "ramanathaswamy-temple.html",
+      "Gangaikonda Cholapuram": "gangaikonda-cholapuram.html"
+    };
+
+    function navigateToDetails(siteName) {
+      const page = detailsPageMapping[siteName];
+      if (page) {
+        window.location.href = page;
+      } else {
+        alert("Details page not found for " + siteName);
+      }
+    }
+
+    const heritageSites = {
+      en: [
+        {
+          name: "Brihadeeswarar Temple",
+          location: "Thanjavur",
+          image:
+            "https://tse2.mm.bing.net/th?id=OIP.U1BUbQpP1XjOdYLy1rrkmwHaFj&pid=Api&P=0&h=220",
+          description:
+            "A UNESCO World Heritage Site and a masterpiece of Chola architecture.",
+          coords: { lat: 10.787, lon: 79.137 }
+        },
+        {
+          name: "Meenakshi Amman Temple",
+          location: "Madurai",
+          image:
+            "https://tse1.mm.bing.net/th?id=OIP.3B2tPbPkrxw-phM-4Q6AqgHaE8&pid=Api&P=0&h=220",
+          description:
+            "A historic Hindu temple dedicated to Goddess Meenakshi.",
+          coords: { lat: 9.925, lon: 78.1198 }
+        },
+        {
+          name: "Mahabalipuram",
+          location: "Chennai",
+          image:
+            "https://tse3.mm.bing.net/th?id=OIP.fOvloesqytzzB8BpKC0eAAHaE5&pid=Api&P=0&h=220",
+          description: "Famous for its rock-cut temples and sculptures.",
+          coords: { lat: 12.620, lon: 80.192 }
+        },
+        {
+          name: "Thanjavur Palace",
+          location: "Thanjavur",
+          image:
+            "https://tse4.mm.bing.net/th?id=OIP.SfjBkUFRZHrPwcb0pciZawHaE8&pid=Api&P=0&h=220",
+          description:
+            "A magnificent palace built during the Nayak period, known for its architecture and art gallery.",
+          coords: { lat: 10.787, lon: 79.137 }
+        },
+        {
+          name: "Ramanathaswamy Temple",
+          location: "Rameswaram",
+          image:
+            "https://tse4.mm.bing.net/th?id=OIP.GdA3HPrA9ByDA7kogoKstAHaE8&pid=Api&P=0&h=220",
+          description:
+            "Famous for its long corridors and Dravidian architectural style, dedicated to Lord Shiva.",
+          coords: { lat: 9.288, lon: 79.312 }
+        },
+        {
+          name: "Gangaikonda Cholapuram",
+          location: "Jayankondam",
+          image:
+            "https://tse4.mm.bing.net/th?id=OIP.JmWCuZVHlJQjjR574QohzwHaEK&pid=Api&P=0&h=220",
+          description:
+            "An architectural marvel built by the Cholas, featuring intricate carvings and sculptures.",
+          coords: { lat: 10.712, lon: 79.360 }
+        }
+      ],
+      ta: [
+        {
+          name: "பிரகதீஸ்வரர் கோவில்",
+          location: "தஞ்சாவூர்",
+          image:
+            "https://tse2.mm.bing.net/th?id=OIP.U1BUbQpP1XjOdYLy1rrkmwHaFj&pid=Api&P=0&h=220",
+          description:
+            "யுனெஸ்கோ உலக பாரம்பரியக் களம் மற்றும் சோழ معمாரியத்தின் சிகரம்.",
+          coords: { lat: 10.787, lon: 79.137 }
+        },
+        {
+          name: "மீனாட்சி அம்மன் கோவில்",
+          location: "மதுரை",
+          image:
+            "https://tse1.mm.bing.net/th?id=OIP.3B2tPbPkrxw-phM-4Q6AqgHaE8&pid=Api&P=0&h=220",
+          description:
+            "மீனாட்சி தேவிக்கு அர்ப்பணிக்கப்பட்ட புகழ்பெற்ற இந்து கோவில்.",
+          coords: { lat: 9.925, lon: 78.1198 }
+        },
+        {
+          name: "மாமல்லபுரம்",
+          location: "சென்னை",
+          image:
+            "https://tse3.mm.bing.net/th?id=OIP.fOvloesqytzzB8BpKC0eAAHaE5&pid=Api&P=0&h=220",
+          description:
+            "பாறை செதுக்கப்பட்ட கோவில்கள் மற்றும் சிற்பங்களுக்குப் புகழ் பெற்றது.",
+          coords: { lat: 12.620, lon: 80.192 }
+        },
+        {
+          name: "தஞ்சாவூர் அரண்மனை",
+          location: "தஞ்சாவூர்",
+          image:
+            "https://tse4.mm.bing.net/th?id=OIP.SfjBkUFRZHrPwcb0pciZawHaE8&pid=Api&P=0&h=220",
+          description:
+            "நாயக்கர் ஆட்சி காலத்தில் கட்டப்பட்ட, சிற்பக்கலை மற்றும் கலைக்களரியால் புகழ்பெற்ற அரண்மனை.",
+          coords: { lat: 10.787, lon: 79.137 }
+        },
+        {
+          name: "ராமநாதசுவாமி கோவில்",
+          location: "ராமேஸ்வரம்",
+          image:
+            "https://tse4.mm.bing.net/th?id=OIP.GdA3HPrA9ByDA7kogoKstAHaE8&pid=Api&P=0&h=220",
+          description:
+            "பெரிய பிரகாரங்கள் மற்றும் திராவிடக் கட்டிடக்கலையை கொண்ட, சிவனுக்கு அர்ப்பணிக்கப்பட்ட கோவில்.",
+          coords: { lat: 9.288, lon: 79.312 }
+        },
+        {
+          name: "கங்கைகொண்ட சோழபுரம்",
+          location: "ஜெயங்கொண்டம்",
+          image:
+            "https://tse4.mm.bing.net/th?id=OIP.JmWCuZVHlJQjjR574QohzwHaEK&pid=Api&P=0&h=220",
+          description:
+            "சோழர்களால் கட்டப்பட்ட சிற்பக் கலை மற்றும் சிற்பங்களை கொண்ட சிறப்பு மிக்க கட்டிடம்.",
+          coords: { lat: 10.712, lon: 79.360 }
+        }
+      ]
+    };
+
+    let currentLanguage = "en";
+    const siteList = document.getElementById("siteList");
+    const modal = document.getElementById("siteModal");
+    const modalOverlay = document.getElementById("modalOverlay");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalDescription = document.getElementById("modalDescription");
+    const playAudioButton = document.getElementById("playAudio");
+    const closeModalButton = document.getElementById("closeModalButton");
+    const nearbyOverlay = document.getElementById("nearbyOverlay");
+    const closeNearbyModalButton = document.getElementById("closeNearbyModalButton");
+    const favoritesOverlay = document.getElementById("favoritesOverlay");
+    const closeFavoritesModalButton = document.getElementById("closeFavoritesModalButton");
+    const reviewsOverlay = document.getElementById("reviewsOverlay");
+    const closeReviewsModalButton = document.getElementById("closeReviewsModalButton");
+
+    /***** Enhanced Chatbot Functionality: Conversation History *****/
+    let conversationHistory = [];
+
+    /***** Render Sites and Populate Location Filter *****/
+    function renderSites(language, sites = null) {
+      siteList.innerHTML = "";
+      const sitesToRender = sites || heritageSites[language];
+      sitesToRender.forEach((site) => {
+        const distanceInfo = site.distance
+          ? `<p>Distance: ${site.distance.toFixed(2)} km</p>`
+          : "";
+        const card = document.createElement("article");
+        card.classList.add("site-card");
+        card.innerHTML = `
+          <img src="${site.image}" alt="${site.name} image" loading="lazy">
+          <div class="site-card-content">
+            <h3>${site.name}</h3>
+            <p>${site.description}</p>
+            ${distanceInfo}
+            <button class="viewButton" data-site="${site.name}">View</button>
+            <button class="nearbyButton" data-location="${site.location}" data-site="${site.name}">Nearby Places</button>
+            <button class="favoriteButton" data-site="${site.name}">Favorite</button>
+            <button class="shareButton" data-site="${site.name}">Share</button>
+            <button class="reviewButton" data-site="${site.name}">Review</button>
+          </div>
+        `;
+        siteList.appendChild(card);
+      });
+      populateLocationFilter();
+    }
+
+    /***** Search Sites *****/
+    document.getElementById("searchBar").addEventListener("input", searchSites);
+    function searchSites() {
+      const searchInput = document.getElementById("searchBar").value.toLowerCase();
+      const filteredSites = heritageSites[currentLanguage].filter(
+        (site) =>
+          site.name.toLowerCase().includes(searchInput) ||
+          site.location.toLowerCase().includes(searchInput) ||
+          site.description.toLowerCase().includes(searchInput)
+      );
+      renderSites(currentLanguage, filteredSites);
+    }
+
+    /***** Haversine Formula for Distance Calculation *****/
+    function getDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371; // Earth's radius in km
+      const dLat = ((lat2 - lat1) * Math.PI) / 180;
+      const dLon = ((lon2 - lon1) * Math.PI) / 180;
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1 * Math.PI / 180) *
+          Math.cos(lat2 * Math.PI / 180) *
+          Math.sin(dLon / 2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    /***** Current Location to Find Nearby Sites Feature *****/
+    function searchNearbySites(userCoords, threshold = 50) {
+      const filteredSites = heritageSites[currentLanguage].filter((site) => {
+        if (site.coords) {
+          const distance = getDistance(
+            userCoords.lat,
+            userCoords.lon,
+            site.coords.lat,
+            site.coords.lon
+          );
+          site.distance = distance;
+          return distance <= threshold;
+        }
+        return false;
+      });
+      if (filteredSites.length === 0) {
+        siteList.innerHTML = `<p style="text-align: center; padding: 1rem;">No nearby heritage sites found.</p>`;
+      } else {
+        filteredSites.sort((a, b) => a.distance - b.distance);
+        renderSites(currentLanguage, filteredSites);
+      }
+    }
+
+    /***** Speech Recognition for Search *****/
+    const micButton = document.getElementById("micButton");
+    const searchBar = document.getElementById("searchBar");
+    window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = currentLanguage === "en" ? "en-US" : "ta-IN";
+    recognition.interimResults = false;
+    recognition.continuous = false;
+
+    micButton.addEventListener("click", () => {
+      recognition.start();
+    });
+    recognition.addEventListener("result", (event) => {
+      const speechToText = event.results[0][0].transcript;
+      searchBar.value = speechToText;
+      searchSites();
+    });
+    recognition.addEventListener("error", (event) => {
+      console.error("Speech recognition error:", event.error);
+    });
+
+    /***** Event listener for the "Find Nearby Sites" button *****/
+    document.getElementById("currentLocationButton").addEventListener("click", () => {
+      const spinner = document.getElementById("locationSpinner");
+      spinner.style.display = "inline-block";
+      trackEvent("use_current_location", {});
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            spinner.style.display = "none";
+            const userCoords = {
+              lat: position.coords.latitude,
+              lon: position.coords.longitude
+            };
+            searchNearbySites(userCoords);
+          },
+          (error) => {
+            spinner.style.display = "none";
+            console.error("Geolocation error:", error);
+            alert("Unable to retrieve your location. Please ensure location services are enabled.");
+          }
+        );
+      } else {
+        spinner.style.display = "none";
+        alert("Geolocation is not supported by your browser.");
+      }
+    });
+
+    /***** Populate Location Filter Dropdown *****/
+    function populateLocationFilter() {
+      const locationFilter = document.getElementById("locationFilter");
+      locationFilter.innerHTML = '<option value="">All Locations</option>';
+      const locations = new Set();
+      heritageSites[currentLanguage].forEach((site) => {
+        if (site.location) {
+          locations.add(site.location);
+        }
+      });
+      locations.forEach((loc) => {
+        const option = document.createElement("option");
+        option.value = loc;
+        option.textContent = loc;
+        locationFilter.appendChild(option);
+      });
+    }
+    document.getElementById("locationFilter").addEventListener("change", function () {
+      const selectedLocation = this.value;
+      if (selectedLocation === "") {
+        renderSites(currentLanguage);
+      } else {
+        const filteredSites = heritageSites[currentLanguage].filter(
+          (site) => site.location === selectedLocation
+        );
+        renderSites(currentLanguage, filteredSites);
+      }
+    });
+
+    /***** Modal Toggle and Close Functions *****/
+    function modalToggle(modalId, state) {
+      const modals = {
+        siteModal: [document.getElementById("siteModal"), document.getElementById("modalOverlay")],
+        nearbyModal: [document.getElementById("nearbyModal"), document.getElementById("nearbyOverlay")],
+        favoritesModal: [document.getElementById("favoritesModal"), document.getElementById("favoritesOverlay")],
+        reviewsModal: [document.getElementById("reviewsModal"), document.getElementById("reviewsOverlay")]
+      };
+      const [modalElement, overlayElement] = modals[modalId];
+      modalElement.style.display = state ? "block" : "none";
+      overlayElement.style.display = state ? "block" : "none";
+    }
+    document.getElementById("modalOverlay").addEventListener("click", () => modalToggle("siteModal", false));
+    closeModalButton.addEventListener("click", () => modalToggle("siteModal", false));
+    document.getElementById("nearbyOverlay").addEventListener("click", () => modalToggle("nearbyModal", false));
+    document.getElementById("closeNearbyModalButton").addEventListener("click", () => modalToggle("nearbyModal", false));
+    document.getElementById("favoritesOverlay").addEventListener("click", () => modalToggle("favoritesModal", false));
+    closeFavoritesModalButton.addEventListener("click", () => modalToggle("favoritesModal", false));
+    document.getElementById("reviewsOverlay").addEventListener("click", () => modalToggle("reviewsModal", false));
+    closeReviewsModalButton.addEventListener("click", () => modalToggle("reviewsModal", false));
+
+    /***** Audio Playback for Site Description *****/
+    playAudioButton.addEventListener("click", () => {
+      const utterance = new SpeechSynthesisUtterance(modalDescription.textContent);
+      utterance.lang = currentLanguage === "en" ? "en-US" : "ta-IN";
+      speechSynthesis.speak(utterance);
+    });
+
+    /***** Language Toggle *****/
+    document.getElementById("toggleLang").addEventListener("click", () => {
+      currentLanguage = currentLanguage === "en" ? "ta" : "en";
+      trackEvent("toggle_language", { language: currentLanguage });
+      document.getElementById("mainHeading").textContent =
+        currentLanguage === "en" ? "Heritage Explorer" : "பாரம்பரிய கையேடு";
+      document.getElementById("subHeading").textContent =
+        currentLanguage === "en"
+          ? "Discover Tamil Nadu's rich heritage and culture"
+          : "தமிழகத்தின் பாரம்பரியத்தை மற்றும் பண்பாட்டை ஆராயுங்கள்";
+      document.getElementById("footerText").textContent =
+        currentLanguage === "en"
+          ? "© 2025 Heritage Explorer | Explore Tamil Nadu"
+          : "© 2025 பாரம்பரிய கையேடு | தமிழகத்தை ஆராயுங்கள்";
+      document.getElementById("toggleLang").textContent =
+        currentLanguage === "en" ? "தமிழ்" : "English";
+      renderSites(currentLanguage);
+      recognition.lang = currentLanguage === "en" ? "en-US" : "ta-IN";
+    });
+
+    /***** Favorites Feature *****/
+    function toggleFavorite(siteName) {
+      let favorites = JSON.parse(localStorage.getItem("favoriteSites")) || [];
+      if (favorites.includes(siteName)) {
+        favorites = favorites.filter((name) => name !== siteName);
+        alert(`${siteName} removed from favorites`);
+      } else {
+        favorites.push(siteName);
+        alert(`${siteName} added to favorites`);
+      }
+      localStorage.setItem("favoriteSites", JSON.stringify(favorites));
+    }
+    function showFavoritesModal() {
+      const favoritesListDiv = document.getElementById("favoritesList");
+      favoritesListDiv.innerHTML = "";
+      let favorites = JSON.parse(localStorage.getItem("favoriteSites")) || [];
+      if (favorites.length === 0) {
+        favoritesListDiv.innerHTML = "<p>No favorites added yet.</p>";
+      } else {
+        favorites.forEach((siteName) => {
+          const p = document.createElement("p");
+          p.classList.add("favoritesItem");
+          p.textContent = siteName;
+          const viewBtn = document.createElement("button");
+          viewBtn.textContent = "View";
+          viewBtn.addEventListener("click", () => {
+            navigateToDetails(siteName);
+            modalToggle("favoritesModal", false);
+          });
+          p.appendChild(viewBtn);
+          favoritesListDiv.appendChild(p);
+        });
+      }
+      modalToggle("favoritesModal", true);
+    }
+    document.getElementById("favoritesButton").addEventListener("click", showFavoritesModal);
+
+    /***** Reviews Feature *****/
+    function openReviewsModal(siteName) {
+      document.getElementById("reviewsSiteName").textContent = siteName;
+      loadReviews(siteName);
+      modalToggle("reviewsModal", true);
+      window.currentReviewSite = siteName;
+    }
+    function loadReviews(siteName) {
+      const reviewsListDiv = document.getElementById("reviewsList");
+      reviewsListDiv.innerHTML = "";
+      let reviews = JSON.parse(localStorage.getItem("reviews")) || {};
+      let siteReviews = reviews[siteName] || [];
+      if (siteReviews.length === 0) {
+        reviewsListDiv.innerHTML =
+          "<p>No reviews yet. Be the first to review this site!</p>";
+      } else {
+        siteReviews.forEach((review) => {
+          const p = document.createElement("p");
+          p.classList.add("reviewsItem");
+          p.textContent = review;
+          reviewsListDiv.appendChild(p);
+        });
+      }
+    }
+    function submitReview() {
+      const reviewText = document.getElementById("newReview").value.trim();
+      if (!reviewText) {
+        alert("Please write a review before submitting.");
+        return;
+      }
+      let reviews = JSON.parse(localStorage.getItem("reviews")) || {};
+      let site = window.currentReviewSite;
+      if (!reviews[site]) {
+        reviews[site] = [];
+      }
+      reviews[site].push(reviewText);
+      localStorage.setItem("reviews", JSON.stringify(reviews));
+      document.getElementById("newReview").value = "";
+      loadReviews(site);
+      alert("Review submitted!");
+    }
+    document.getElementById("submitReviewButton").addEventListener("click", submitReview);
+
+    /***** Chatbot Setup *****/
+    const chatbotToggle = document.getElementById("chatbotToggle");
+    const chatbotContainer = document.getElementById("chatbotContainer");
+    const chatbotMessages = document.getElementById("chatbotMessages");
+    const chatbotInput = document.getElementById("chatbotInput");
+    const chatbotSendButton = document.getElementById("chatbotSendButton");
+
+    chatbotToggle.addEventListener("click", () => {
+      chatbotContainer.style.display = chatbotContainer.style.display === "flex" ? "none" : "flex";
+      trackEvent("toggle_chatbot", { state: chatbotContainer.style.display });
+    });
+
+    function sendMessage() {
+      const userMessage = chatbotInput.value.trim();
+      if (!userMessage) return;
+      trackEvent("chatbot_user_message", { message: userMessage });
+      const userMessageElement = document.createElement("div");
+      userMessageElement.classList.add("user");
+      userMessageElement.textContent = userMessage;
+      chatbotMessages.appendChild(userMessageElement);
+      chatbotInput.value = "";
+      chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+      setTimeout(() => {
+        const botResponse = getChatbotResponse(userMessage);
+        const botMessageElement = document.createElement("div");
+        botMessageElement.classList.add("bot");
+        botMessageElement.textContent = botResponse;
+        chatbotMessages.appendChild(botMessageElement);
+        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        trackEvent("chatbot_bot_response", { message: botResponse });
+      }, 500);
+    }
+
+    function getChatbotResponse(userMessage) {
+      conversationHistory.push({ role: "user", message: userMessage });
+      let botResponse = "";
+      if (currentLanguage === "en") {
+        if (userMessage.toLowerCase().includes("hello")) {
+          botResponse = "Hello! How can I assist you in exploring Tamil Nadu's heritage?";
+        } else if (conversationHistory.length > 3) {
+          botResponse = "I see you're interested in exploring Tamil Nadu's heritage in detail. Let me provide more personalized recommendations.";
+        } else {
+          botResponse = "I'm here to help you discover heritage sites. Please ask about a specific site or feature!";
+        }
+      } else {
+        if (userMessage.includes("வணக்கம்")) {
+          botResponse = "வணக்கம்! தமிழக பாரம்பரியத்தை ஆராய நான் உங்களுக்கு உதவ தயாராக இருக்கிறேன்.";
+        } else if (conversationHistory.length > 3) {
+          botResponse = "நீங்கள் தமிழக பாரம்பரியத்தை விரிவாக ஆராய விரும்புகிறீர்கள் என்று தெரிகிறது. மேலும் தனிப்பட்ட பரிந்துரைகளை வழங்குகிறேன்.";
+        } else {
+          botResponse = "ஒரு குறிப்பிட்ட இடம் அல்லது அம்சத்தை கேளுங்கள், நான் உதவுகிறேன்!";
+        }
+      }
+      conversationHistory.push({ role: "bot", message: botResponse });
+      return botResponse;
+    }
+    chatbotSendButton.addEventListener("click", sendMessage);
+    chatbotInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") sendMessage();
+    });
+
+    /***** Delegate Click Events for Dynamic Site Card Buttons *****/
+    siteList.addEventListener("click", (e) => {
+      if (e.target.classList.contains("viewButton")) {
+        const siteName = e.target.getAttribute("data-site");
+        trackEvent("click_view_button", { site: siteName });
+        navigateToDetails(siteName);
+      } else if (e.target.classList.contains("nearbyButton")) {
+        const location = e.target.getAttribute("data-location");
+        const siteName = e.target.getAttribute("data-site");
+        trackEvent("click_nearby_button", { site: siteName, location: location });
+        showNearbyPlaces(location, siteName);
+      } else if (e.target.classList.contains("favoriteButton")) {
+        const siteName = e.target.getAttribute("data-site");
+        trackEvent("click_favorite_button", { site: siteName });
+        toggleFavorite(siteName);
+      } else if (e.target.classList.contains("shareButton")) {
+        const siteName = e.target.getAttribute("data-site");
+        trackEvent("click_share_button", { site: siteName });
+        shareSite(siteName);
+      } else if (e.target.classList.contains("reviewButton")) {
+        const siteName = e.target.getAttribute("data-site");
+        trackEvent("click_review_button", { site: siteName });
+        openReviewsModal(siteName);
+      }
+    });
+
+    /***** Show Nearby Places Function *****/
+    function showNearbyPlaces(location, siteName) {
+      const nearbySites = heritageSites[currentLanguage].filter(
+        (site) => site.location === location && site.name !== siteName
+      );
+      const nearbyListDiv = document.getElementById("nearbyList");
+      nearbyListDiv.innerHTML = "";
+
+      if (nearbySites.length === 0) {
+        nearbyListDiv.innerHTML = "<p>No nearby places found.</p>";
+      } else {
+        nearbySites.forEach((site) => {
+          const p = document.createElement("p");
+          p.textContent = site.name;
+          nearbyListDiv.appendChild(p);
+        });
+      }
+      modalToggle("nearbyModal", true);
+    }
+
+    /***** Share Feature *****/
+    function shareSite(siteName) {
+      const site = heritageSites[currentLanguage].find((s) => s.name === siteName);
+      if (!site) return;
+      const shareData = {
+        title: site.name,
+        text: site.description,
+        url: window.location.href + "?site=" + encodeURIComponent(site.name)
+      };
+      if (navigator.share) {
+        navigator
+          .share(shareData)
+          .then(() => console.log("Site shared successfully"))
+          .catch((error) => console.error("Error sharing:", error));
+      } else {
+        navigator.clipboard
+          .writeText(shareData.url)
+          .then(() => alert("URL copied to clipboard"))
+          .catch((err) => console.error("Could not copy text: ", err));
+      }
+    }
+
+    /***** Back-to-Top Button Functionality *****/
+    const backToTop = document.getElementById("backToTop");
+    window.addEventListener("scroll", () => {
+      if (window.scrollY > 300) {
+        backToTop.style.display = "flex";
+      } else {
+        backToTop.style.display = "none";
+      }
+    });
+    backToTop.addEventListener("click", () => {
+      trackEvent("back_to_top_clicked", {});
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
+    
+
+    // Initial render of sites
+    renderSites(currentLanguage);
+  </script>
+</body>
+</html>
